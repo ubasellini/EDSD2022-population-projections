@@ -87,11 +87,28 @@ dta.swe.l %>%
 ## CASE of MALE population
 
 ## some inputs for adjusting the first age group
+fact.srbM <- srb/(1+srb)
+L0M <- dta.swe$LMx[dta.swe$Age==0]
+
+dta.swe <- dta.swe %>% 
+  mutate(sMx=lead(LMx)/LMx,
+         NMx5=lag(sMx*NMx),
+         sMx=ifelse(test = Age==80,
+                    yes  = lead(LMx)/(LMx+lead(LMx)),
+                    no   = sMx),
+         NMx5=ifelse(test = Age==85,
+                     yes  = (NMx+lag(NMx))*lag(sMx),
+                     no   = NMx5),
+         bMx=fact.srbM*L0M/(2*l0)*(Fx+sFx*lead(Fx)),
+         NMx5=ifelse(test = Age==0,
+                     yes  = sum(bMx*NFx,na.rm=T),
+                     no   = NMx5))
+
 
 ## projecting the male population
 
 ## checking the results
-
+head(dta.swe[,c(1:3,6,9,13)])
 
 ## saving the data for tomorrow's lecture
 save.image("data/EDSD.lecture2.Rdata")
