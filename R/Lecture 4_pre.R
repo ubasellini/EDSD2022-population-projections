@@ -140,6 +140,25 @@ ggplot(dta.swe.all,aes(x=AgeGroup,y=population,fill=type)) +
   scale_fill_manual(name = 'Assumption', values=c("lightblue","orange"))
 
 
+##----- EXERCISE 3: TIME-VARYING assumptions on TFR --------
+
+## extract the Fx
+x <- dta.swe$Age
+fx <- dta.swe$Fx
+tfr.curr <- 5*sum(fx)
+FX <- matrix(fx,nrow = m,ncol=n)
+tfr <- seq(tfr.curr,0.75,length.out=20)
+plot(1:20,tfr)
+
+i <- 2
+for (i in 1:n){
+  FX[,i] <- (FX[,i]/tfr.curr) * tfr[i]
+}
+
+matplot(x,FX,t="l",lty=1,col=viridis(n))
+5*apply(FX,2,sum)
+
+
 
 
 ## END
