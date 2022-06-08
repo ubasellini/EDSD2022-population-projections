@@ -41,6 +41,7 @@ plot(x, Ix, type="o",pch=16,
 
 
 
+
 ##----- EXERCISE 2: Projections with open population --------
 rm(list=ls(all=TRUE))
 
@@ -53,7 +54,6 @@ library(migest)
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 ## loading the data 
-dir()
 load("data/EDSD.lecture3.Rdata")  
 
 ## function to construct RC schedule
@@ -67,9 +67,78 @@ mxRG <- function(x,pars){
 my.pars <- rc_model_fund %>%
   select(value) %>% pull()
 
-## derive the net female migrants by age (RC schedule)
 
-## plotting crude growth rate
+## assume a total of 25000 net migration counts
+I <- 2.5e4
+mx <- mxRG(x=dta.swe$Age,pars=my.pars)
+plot(dta.swe$Age,mx)
+Ix <- I*mx
+sum(Ix)
+plot(dta.swe$Age, Ix, type="o",pch=16,
+     xlab = "Age group",ylab= "Net migrant counts",
+     main="RC migration schedule for 25,000 net migrants")
+
+
+## create population matrix function with MIGRATION
+pop.proj.MIG <- function(AgeGroup,bFx,sFx,NFx,Ix,n){
+  ## dimension of age group vector
+  m <- length(AgeGroup)
+  ## create our Leslie matrix
+  L <- matrix(0,nrow=m,ncol=m)
+  ## assign these two vectors to L
+  L[1,] <- bFx
+  diag(L[-1,]) <- sFx
+  L[m,m] <- sFx[length(sFx)]
+  ## create matrix of population counts
+  N <- matrix(NA,nrow = m,ncol = (n+1))
+  ## assign starting population to first column of N
+  N[,1] <- NFx
+  ## for loop to project population n times
+  for (i in 1:n){
+    N[,i+1] <- L%*%(N[,i]+Ix/2) + Ix/2
+  }
+  ## define our output
+  out <- cbind(data.frame(AgeGroup=AgeGroup),N)
+  return(out)
+}
+
+## define projection period
+n <- 20
+## actual projection
+my.proj <- pop.proj(AgeGroup=dta.swe$AgeGroup,
+                    bFx=bFx,sFx = sFx,
+                    NFx = NFx,n=n)
+my.proj.mig <- pop.proj.MIG(AgeGroup=dta.swe$AgeGroup,
+                            bFx=bFx,sFx = sFx,
+                            NFx = NFx,Ix=Ix,n=n)
+
+## long data format
+dta.swe.l <- my.proj %>%
+  pivot_longer(-c(AgeGroup),names_to = "period",values_to = "population") %>%
+  mutate(period=as.numeric(period),
+         Year = 1993 + (period-1)*5,
+         YearF=as.factor(Year),
+         type="baseline")
+dta.swe.l.mig <- my.proj.mig %>%
+  pivot_longer(-c(AgeGroup),names_to = "period",values_to = "population") %>%
+  mutate(period=as.numeric(period),
+         Year = 1993 + (period-1)*5,
+         YearF=as.factor(Year),
+         type="with migration")
+
+## combine the long data
+dta.swe.all <- dta.swe.l %>% 
+  bind_rows(dta.swe.l.mig)
+
+## plotting with pyramid
+ggplot(dta.swe.all,aes(x=AgeGroup,y=population,fill=type)) +
+  geom_bar(data = subset(dta.swe.all, Year == max(Year)),
+           stat = "identity",position = "dodge",color = "black") +
+  coord_flip() +
+  theme_bw() +
+  ggtitle("Swedish female population 2093") +
+  scale_fill_manual(name = 'Assumption', values=c("lightblue","orange"))
+
 
 
 
